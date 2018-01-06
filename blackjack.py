@@ -7,18 +7,18 @@
 # Distributed under terms of the MIT license.
 ###############################################################################
 
-"""This module implements a blackjack simulator for testing the effectiveness
+'''This module implements a blackjack simulator for testing the effectiveness
 of player strategies.
-"""
+'''
 
 import itertools
 import functools
 import random
 
 class Card:
-    """Card represents a playing card in Blackjack and is responsible for
+    '''Card represents a playing card in Blackjack and is responsible for
     knowing all of its potential values.  Valid suits are not enforced.
-    """
+    '''
     _val_map = {'A': [1, 11], 'J': [10], 'Q': [10], 'K': [10]}
     _val_map.update({str(n): [n] for n in range(2, 11)})
 
@@ -43,10 +43,10 @@ class Card:
         return '%s%s (%s)' % (self._rank, self._suit, values)
         
     def __str__(self):
-        """Returns a color-coded string representation of Card.  The color
+        '''Returns a color-coded string representation of Card.  The color
         coding is injected for red cards only if the Card was created with a
         suit value equal to a unicode representation of a heart or diamond.
-        """
+        '''
         (clr0, clr1) = ('', '')
         if self._suit in ['\u2665', '\u2666']:     # heart or diamond
             (clr0, clr1) = ('\x1b[31m','\x1b[0m')  # red markup decorators
@@ -54,16 +54,12 @@ class Card:
 
 
 class Shoe:
-    """Shoe is an arbitrary number of decks of Cards that get shuffled together.
+    '''Shoe is an arbitrary number of decks of Cards that get shuffled together.
     Cards are dealt from the Shoe.  If a specified fraction of the Shoe has been
     dealt, then when the Shoe is next checked by a dealer,the Cards will be
     replaced and reshuffled.
-    """
+    '''
     def __init__(self, num_decks, depth_threshold):
-        """Create a Shoe with num_decks decks and with a reshuffle threshold
-        specified by the fraction depth_threshold.  The Cards are created and
-        shuffled.
-        """
         self._ndecks = num_decks
         self._shoe_size = num_decks * 52
         self._depth_threshold = depth_threshold
@@ -78,21 +74,17 @@ class Shoe:
         return len(self._cards)
         
     def check_reshuffle(self):
-        """Reshuffles when the fraction _depth_threshold of the deck has been
-        dealt.
-        """
         if 1 - self.num_cards/self.max_cards >= self._depth_threshold:
             print('RESHUFFLING!')
             self._shuffle()
             
     def deal_one(self):
-        """Returns a card from the top of the deck."""
         if len(self._cards) == 0:
             self.check_reshuffle()
         return self._cards.pop()
     
     def _shuffle(self):
-        """Creates _ndecks of Cards and shuffles."""
+        '''Creates _ndecks of Cards and shuffles.'''
         ranks = ['A'] + [str(n) for n in range(2, 11)] + ['J', 'Q', 'K']
         suits = ['\u2660', '\u2665', '\u2666', '\u2663']
         decks = [itertools.product(ranks, suits) for ideck in range(self._ndecks)]
@@ -110,11 +102,11 @@ class Shoe:
 
 
 class Hand:
-    """Hand is a Blackjack hand of Card objects and is responsible for reporting
+    '''Hand is a Blackjack hand of Card objects and is responsible for reporting
     all of its possible scores.  Hand includes all properties that are required
     to determine payouts other than the payout ratios associated with the house
     rules.
-    """
+    '''
     def __init__(self, seat_split=(0,0), bet=0):
         self._cards = []
         self._hole = None
@@ -150,8 +142,7 @@ class Hand:
 
     @property
     def scores(self):
-        '''Returns all possible scores (more than one if hand contains aces).
-        '''
+        '''Returns all possible scores (more than 1 if hand contains aces).'''
         card_vals = [card.values for card in self._cards]
         sums = [sum(list(vals_list))
                 for vals_list in itertools.product(*card_vals)]
@@ -179,7 +170,7 @@ class Hand:
             self._cards.append(card)
             
     def split(self, card1, card2):
-        """Perform a Split and return newly split hand."""
+        '''Perform a Split and return newly split hand.'''
         assert self.num_cards == 2
         assert self._cards[0] == self._cards[1]
         hand = Hand((self.seat_id, self.split_id), self.bet)
