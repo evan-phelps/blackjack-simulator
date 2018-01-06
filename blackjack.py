@@ -107,7 +107,97 @@ class Shoe:
                                                       self._depth_threshold)
         she_repr += ' %d/%d' % (len(self._cards), self._shoe_size)
         return shoe_repr
+
+
+class Hand:
+    """Hand is a Blackjack hand of Card objects and is responsible for reporting
+    all of its possible scores.  Hand includes all properties that are required
+    to determine payouts other than the payout ratios associated with the house
+    rules.
+    """
+    def __init__(self, seat_split=(0,0), bet=0):
+        self._cards = []
+        self._hole = None
+        self._bet = bet
+        self._is_insured = False
+        self._seat = seat_split[0]
+        self._split = seat_split[1]
+        self.__key = hash( (self._seat, self._split) )
     
+    @property
+    def seat_id(self):
+        return self._seat
+    
+    @property
+    def split_id(self):
+        return self._split
+
+    @property
+    def bet(self):
+        return self._bet
+    
+    @property
+    def cards(self):
+        return ','.join([card.card for card in self._cards])
+    
+    @property
+    def num_cards(self):
+        return len(self._cards)
+    
+    @property
+    def is_blackjack(self):
+        return self.num_cards == 2 and self.best_score == 21
+
+    @property
+    def scores(self):
+        '''Returns all possible scores (more than one if hand contains aces).
+        '''
+        card_vals = [card.values for card in self._cards]
+        sums = [sum(list(vals_list))
+                for vals_list in itertools.product(*card_vals)]
+        # sums = filter(lambda x: x <= 21, sums)
+        return sorted(set(sums))
+
+    @property
+    def best_score(self):
+        if len(self.scores) == 0:
+            return 0
+        inplay = [s for s in self.scores if s<=21]
+        if len(inplay) == 0:
+            return min(self.scores)
+        return max([s for s in self.scores if s<=21])
+    
+    def unhole(self):
+        if self._hole is not None:
+            self._cards.append(self._hole)
+            self._hole = None
+
+    def add_card(self, card, ishole=False):
+        if ishole:
+            self._hole = card
+        else:
+            self._cards.append(card)
+            
+    def split(self, card1, card2):
+        """Perform a Split and return newly split hand."""
+        assert self.num_cards == 2
+        assert self._cards[0] == self._cards[1]
+        hand = Hand((self.seat_id, self.split_id), self.bet)
+        hand.add_card(self._cards.pop())
+        self.add_card(card1)
+        hand.add_card(card2)
+        return hand
+            
+    def __str__(self):
+        visible = [str(card) for card in self._cards]
+        holes = [] if self._hole is None else ['??']
+        cards = visible + holes
+        return 'Seat/Split: %d/%d \t %d \t %s' % (self._seat,
+                                                  self._split,
+                                                  self.best_score,
+                                                  ' '.join(cards))
+
+
 ###############################################################################
 # py.test tests
 
@@ -142,3 +232,23 @@ def test_Shoe():
     assert shoe.num_cards == 13
     shoe.check_reshuffle()
     assert shoe.num_cards == 52
+
+
+def test_Hand():
+    hand = Hand()
+    assert hand.bet == 0
+    assert hand.seat_id == 0
+    assert hand.split_id == 0
+    assert hand.cards == ''
+    assert hand.num_cards == 0
+    assert hand.is_blackjack is not True
+    assert hand.scores == [0]
+    assert hand.best_score == 0
+    
+    hand.add_card(Card('A', 'S'))
+    hand.add_card(Card('J', 'S'))
+    assert hand.num_cards == 2
+    assert hand.is_blackjack is True
+    assert 11 in hand.scores
+    assert 21 in hand.scores
+    assert hand.best_score == 21
