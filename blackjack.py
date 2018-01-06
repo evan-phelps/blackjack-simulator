@@ -11,6 +11,10 @@
 of player strategies.
 """
 
+import itertools
+import functools
+import random
+
 class Card:
     """Card represents a playing card in Blackjack and is responsible for
     knowing all of its potential values.  Valid suits are not enforced.
@@ -64,11 +68,29 @@ class Shoe:
         self._shoe_size = num_decks * 52
         self._depth_threshold = depth_threshold
         self._shuffle()
-        
+
     @property
-    def num_decks(self):
-        return self._ndecks
+    def max_cards(self):
+        return self._shoe_size
+
+    @property
+    def num_cards(self):
+        return len(self._cards)
         
+    def check_reshuffle(self):
+        """Reshuffles when the fraction _depth_threshold of the deck has been
+        dealt.
+        """
+        if 1 - self.num_cards/self.max_cards >= self._depth_threshold:
+            print('RESHUFFLING!')
+            self._shuffle()
+            
+    def deal_one(self):
+        """Returns a card from the top of the deck."""
+        if len(self._cards) == 0:
+            self.check_reshuffle()
+        return self._cards.pop()
+    
     def _shuffle(self):
         """Creates _ndecks of Cards and shuffles."""
         ranks = ['A'] + [str(n) for n in range(2, 11)] + ['J', 'Q', 'K']
@@ -80,19 +102,11 @@ class Shoe:
         self._cards = [Card(rank, suit) for (rank, suit) in cards]
         random.shuffle(self._cards)
 
-    def check_reshuffle(self):
-        """Reshuffles when the fraction _depth_threshold of the deck has been
-        dealt.
-        """
-        if 1 - len(self._cards)/self._shoe_size >= self._depth_threshold:
-            print('RESHUFFLING!')
-            self._shuffle()
-            
-    def deal_one(self):
-        """Returns a card from the top of the deck."""
-        if len(self._cards) == 0:
-            self.check_depth()
-        return self._cards.pop()
+    def __repr__(self):
+        shoe_repr = 'decks=%d, reshuffle at %.2f.' % (self._ndecks,
+                                                      self._depth_threshold)
+        she_repr += ' %d/%d' % (len(self._cards), self._shoe_size)
+        return shoe_repr
     
 ###############################################################################
 # py.test tests
@@ -112,4 +126,19 @@ def test_Card():
 
 
 def test_Shoe():
-    pass
+    shoe = Shoe(1, 0.75)
+    assert shoe.max_cards == 52
+    cards =  list([shoe.deal_one() for i in range(52)])
+    assert len(cards) == 52
+    assert shoe.num_cards == 0
+    card = shoe.deal_one()
+    assert shoe.num_cards == 51
+    
+    for i in range(37):
+        card = shoe.deal_one()
+        shoe.check_reshuffle()
+    assert shoe.num_cards == 14
+    card = shoe.deal_one()
+    assert shoe.num_cards == 13
+    shoe.check_reshuffle()
+    assert shoe.num_cards == 52
