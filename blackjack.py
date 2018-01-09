@@ -215,11 +215,11 @@ class RuleSet:
 
 
 class Strategy:
-    '''Strategy is informally an abstract base class that provides for
-    is meant to encapsulate everything that might inform a strategy, most
-    importantly a view of all of the cards on the table at any point in time.
-    From that any specific strategy implemented could choose to consider only
-    the dealer's visible cars, consider all player's cards, or to accumulate
+    '''Strategy is informally an abstract base class that is meant to
+    encapsulate everything that might inform a strategy, most importantly a
+    view of all of the cards on the table at any point in time.  From that,
+    any specific strategy implemented could choose to consider only the
+    dealer's visible cars, consider all player's cards, or to accumulate
     knowledge about the history of cards played.
     '''
     
@@ -245,7 +245,7 @@ class Dealer(Hand):
         Hand.__init__(self)
         self._rules = rules
         self._deal = deal_one_func
- 
+
     def play_through(self):
         play = self._rules.get_dealer_play(self)
         while play == RuleSet.ValidMoves.HIT:
@@ -289,46 +289,6 @@ class Player:
     def __str__(self):
         hands_str = '\t\n'.join([str(h) for h in self._hands])
         return 'Player %d:\n\t%s' % (self.seat, hands_str)
-
-###############################################################################
-# DEFAULT VARIANT/STRATEGY IMPLEMENTATIONS
-
-class RuleSetBase(RuleSet):
-    
-    def get_player_options(self, hand_player, hand_dealer):
-        valid_options = [ValidMoves.STAY]
-        if min(hand_player.scores)<21:
-            valid_options.append(ValidMoves.HIT)
-        return valid_options
-    
-    def get_dealer_play(self, hand):
-        scores = [score for score in hand.scores if score <=21]
-        if len(scores) == 0:
-            return ValidMoves.STAY
-        for score in reversed(scores):
-            if score > 16:
-                return ValidMoves.STAY
-            elif score <= 16:
-                return ValidMoves.HIT
-        raise InvalidMoveError('Dealer unable to choose! If you see this '
-                                + 'error, then your RuleSet class does not '
-                                + 'account for all possible hand states.')
-
-
-class StrategyDefault(Strategy):
-    
-    def advise_bet(self, hand):
-        return 0
-    
-    def advise_play(self, hand):
-        for score in reversed(hand.scores):
-            if score > 16:
-                return RuleSet.ValidMoves.STAY
-            elif score <= 16:
-                return RuleSet.ValidMoves.HIT
-        raise InvalidMoveError('Player unable to choose! If you see this '
-                                + 'error, then your Strategy class does not '
-                                + 'account for all possible hand states.')
 
 ###############################################################################
 # py.test tests
