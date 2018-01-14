@@ -80,7 +80,7 @@ class Shoe:
     def num_dealt(self): return self.max_cards - self.num_cards
 
     def check_reshuffle(self):
-        if 1 - self.num_cards / self.max_cards >= self._depth_threshold:
+        if self.num_dealt() / self.max_cards >= self._depth_threshold:
             print('RESHUFFLING!')
             self._shuffle()
 
@@ -237,6 +237,11 @@ class Strategy:
 
     def advise_play(self, hand):
         assert False  # implement in subclass
+        
+    def observe(self):
+        for hand in self._hands:
+            for c in hand.cards:
+                self._cards.append(c)
 
 
 class Dealer(Hand):
@@ -247,10 +252,11 @@ class Dealer(Hand):
         self._deal = deal_one_func
 
     def play_through(self):
+        self.unhole()
         play = self._rules.get_dealer_play(self)
         while play == RuleSet.ValidMoves.HIT:
             self.add_card(self._deal())
-            play = self._adviser.get_dealer_play(self)
+            play = self._rules.get_dealer_play(self)
 
     def __str__(self):
         return 'DEALER\t%s'%(super(Dealer, self).__str__())
@@ -271,17 +277,27 @@ class Player:
         self._hands.append(hand)
         
     def make_bet(self):
+        self._strategy.check_reshuffle()
         return self._strategy.advise_bet()
         
     def play_through(self):
-        strategy.check_reshuffle()
         for hand in self._hands:
             # TODO: Account for split, insurance, etc.
-            # Consider moving the play_through functionality to the Hand
+            # Consider moving the play_through functionality to the Hand and
+            #   let the game/table manage hand-to-player associations.
+            # Having the logic that connect player choices to game action
+            #   means that this class must be *aware* of any brand new plays
+            #   that might be introduced by a novel variant.  However,
+            #   Blackjack variants that I've seen all share the same basic
+            #   elements of play and only vary parameters and payouts, so I
+            #   don't consider this to be an unacceptable limitation.
             play = self._strategy.advise_play(hand)
             while play == RuleSet.ValidMoves.HIT:
                 hand.add_card(self._deal())
                 play = self._strategy.advise_play(hand)
+    
+    def observe(self):
+        strategy.observe()
     
     def clear_hands(self):
         self._hands.clear()
@@ -290,9 +306,72 @@ class Player:
         hands_str = '\t\n'.join([str(h) for h in self._hands])
         return 'Player %d:\n\t%s' % (self.seat, hands_str)
 
+
+class Game:
+    def __init__(self, ruleset, num_decks=6, depth_threshold=0.75):
+        self._rules = ruleset
+        self._shoe = Shoe(num_decks, depth_threshold)
+        self._players = []
+        self._round_num = 0
+        self._game = (ruleset.__name__, num_decks, depth_threshold)
+        self._dealer = None
+        self._hands = None
+        self._results = None
+        
+    def add_player(self, seat, strategy_class):
+        strategy = strategy_class(seat, self._shoe.num_dealt)
+        self._players.add(Player(seat, strategy, self._shoe.deal_one))
+        # There's probably a better way to account for this, but let's make
+        #   sure the player list is ordered by seat after each new player.
+        self._players.sort(key=lambda p: p.seat)
+    
+    def _setup_round(self):
+        self._results = None
+        self._hands = []
+        self._dealer = Dealer(self._rules, self._shoe.deal_one)
+        self._hands.append(self._dealer)
+        for p in self._players:
+            bet = p.make_bet()
+            hand = Hand((p.seat, 0), bet)
+            self._hands.append(hand)
+            p.add_hand(hand)
+    
+    def _deal(self):
+        for i in range(2):
+            for h in self._hands[1:]:
+                h.add_card(this._shoe.deal_one())
+            is_holecard = i==0
+            self._dealer.add_card(this._shoe.deal_one(), is_holecard)
+    
+    def _play_hands(self):
+        for p in self._players:
+            p.play_through()
+        self._dealer.play_through()
+    
+    def _resolve_hands(self):
+        # set results of round as tuple of payouts
+        pass
+    
+    def _observe(self):
+        for p in self._players:
+            p.observe()
+    
+    def _play_round(self):
+        self._round_num += 1
+        self._setup_round()
+        self._deal()
+        self._play_hands()
+        self._resolve_hands()
+        self._observe()
+        
+    def play(self, num_rounds):
+        for iround in range(num_rounds):
+            self._play_round()
+    
+        
 ###############################################################################
 # py.test tests
-
+    
 def test_Card():
     ace_of_spades = Card('A', Card.SPADE)
     assert str(ace_of_spades) == 'A' + Card.SPADE
