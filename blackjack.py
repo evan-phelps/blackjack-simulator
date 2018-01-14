@@ -224,6 +224,11 @@ class Strategy:
     '''
     
     def __init__(self, hands, ncards_dealt_func):
+        # Having _cards (card history) here leads to a duplication of
+        #   the card history across all instances of Strategy, even those
+        #   that do not use it.  This should probably be modified so that
+        #   there is only one card history or delegate this feature to
+        #   Strategy extensions.
         self._cards = []
         self._hands = hands
         self._get_num_dealt = ncards_dealt_func
