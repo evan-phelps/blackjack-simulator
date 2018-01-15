@@ -7,6 +7,22 @@
 ## Overview
 The Blackjack Strategy Simulator is meant to provide a simple framework for testing different blackjack player strategies under various rulesets.  The simulator is divided into three main conceptual components: (1) the *core* gameplay mechanism in `blackjack.py`, (2) the Strategy and RuleSet specifications, and (3) monitoring/analysis code that operates on serialized output (initially files) from the core gameplay mechanism.  The gameplay mechanism allows the invoker to specify how many rounds to play and returns the net results of the game for all players.  It can, also, print round-by-round results to a file, if provided by the invoker of `Game.play`, which, for example, could be useful for testing the effect of number of cards played on card-counting strategies.
 
+## Core gameplay classes
+To run simulations, you should only need to extend `Strategy` and `RuleSet` and use `Game` to add players (`Game.add_player(seat_id, strategy_class)`) and start the game (`Game.play(num_rounds, rounds_out)`).
+
+However, the core blackjack mechanism of `blackjack.py` includes the following main classes:
+
+Class | Responsibility
+------|---------------
+Card | Keep suit, rank, possible values, and visual representation.
+Shoe | Shuffle and dispense cards to Hands.
+Hand | Calculate its possible scores.
+Dealer | Play the dealer hand according to house rules.
+Player | Bet and play hand according to strategy.
+Strategy | Abstract base class (informally), user-extended to calculate bets and make play decisions.
+RuleSet | Abstract base class (informally), user-extended to implement variant rules and payouts.
+Game | Enforce game structure and flow.
+
 ## How to simulate a strategy
 An example Strategy/RuleSet implementation is defined in `blackjack_sim1.py`.  The example demonstrates the basic recipe for creating a simulation:
 1. Import the core mechanism, `from blackjack import *`.
@@ -46,18 +62,3 @@ Some of the values in the round-level results could be calculated from others bu
 
 The game-level results consist only of the final profit per dollar for each player, which is returned by `Game.play`.
 
-## Core classes
-To run simulations, you should only need to extend `Strategy` and `RuleSet` and use `Game` to add players (`Game.add_player(seat_id, strategy_class)`) and start the game (`Game.play(num_rounds, rounds_out)`).
-
-However, the core blackjack mechanism of `blackjack.py` includes the following main classes:
-
-Class | Responsibility
-------|---------------
-Card | Keep suit, rank, possible values, and visual representation.
-Shoe | Shuffle and dispense cards to Hands.
-Hand | Calculate its possible scores.
-Dealer | Play the dealer hand according to house rules.
-Player | Bet and play hand according to strategy.
-Strategy | Abstract base class (informally), user-extended to calculate bets and make play decisions.
-RuleSet | Abstract base class (informally), user-extended to implement variant rules and payouts.
-Game | Enforce game structure and flow.
