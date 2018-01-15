@@ -1,6 +1,7 @@
 # Blackjack Strategy Simulator
 
 [Note 1: Not all rules have been implemented yet (e.g., insurance).]
+
 [Note 2: The Notebook `Blackjack_Preliminary_Analysis` provides some informal early notes and links to references about rules and statistics.]
 
 ## Overview
