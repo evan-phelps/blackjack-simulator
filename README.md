@@ -44,3 +44,19 @@ The round-level results are in the form of comma-separated values:
 Some of the values in the round-level results could be calculated from others but are explicitly written for convenience and for *sanity checks*.
 
 The game-level results consist only of the final profit per dollar for each player, which is returned by `Game.play`.
+
+## Core classes
+To run simulations, you should only need to extend `Strategy` and `RuleSet` and use `Game` to add players (`Game.add_player(seat_id, strategy_class)`) and start the game (`Game.play(num_rounds, rounds_out)`).
+
+However, the core blackjack mechanism of `blackjack.py` includes the following main classes:
+
+Class | Responsibility
+------|---------------
+Card | Keep suit, rank, possible values, and visual representation.
+Shoe | Shuffle and dispense cards to Hands.
+Hand | Calculate its possible scores.
+Dealer | Play the dealer hand according to house rules.
+Player | Bet and play hand according to strategy.
+Strategy | Abstract base class (informally), user-extended to calculate bets and make play decisions.
+RuleSet | Abstract base class (informally), user-extended to implement variant rules and payouts.
+Game | Enforce game structure and flow.
