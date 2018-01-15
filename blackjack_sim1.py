@@ -37,7 +37,7 @@ class RuleSetBase(RuleSet):
 class StrategyDefault(Strategy):
     
     def advise_bet(self):
-        return 0
+        return 1
     
     def advise_play(self, hand):
         for score in reversed(hand.scores):
@@ -95,4 +95,12 @@ def test_StrategyDefault():
 
 
 if __name__ == '__main__':
-    test_Round()
+    game = Game(RuleSetBase())
+    game.add_player(1, StrategyDefault)
+    game.add_player(2, StrategyDefault)
+    game.add_player(3, StrategyDefault)
+    game.add_player(4, StrategyDefault)
+    game.add_player(5, StrategyDefault)
+    game.add_player(6, StrategyDefault)
+    with open('1000_rounds.csv', 'w') as fout:
+        print(game.play(1000, fout))

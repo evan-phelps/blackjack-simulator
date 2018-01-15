@@ -10,6 +10,7 @@
 '''A Blackjack simulator for testing the effectiveness of player strategies.
 '''
 
+import sys
 import itertools
 import functools
 import random
@@ -81,7 +82,6 @@ class Shoe:
 
     def check_reshuffle(self):
         if self.num_dealt() / self.max_cards >= self._depth_threshold:
-            print('RESHUFFLING!')
             self._shuffle()
 
     def deal_one(self):
@@ -120,6 +120,7 @@ class Hand:
         self._hole = None
         self._bet = bet
         self._is_insured = False
+        self._payout = None
         self._seat = seat_split[0]
         self._split = seat_split[1]
         self.__key = hash((self._seat, self._split))
@@ -134,7 +135,7 @@ class Hand:
     def bet(self): return self._bet
 
     @property
-    def cards(self): return ','.join([card.card for card in self._cards])
+    def cards(self): return ','.join([card.card_rep for card in self._cards])
 
     @property
     def num_cards(self): return len(self._cards)
@@ -161,6 +162,14 @@ class Hand:
             return min(self.scores)
         return max([s for s in self.scores if s <= 21])
 
+    @property
+    def payout(self):
+        return self._payout
+    
+    @payout.setter
+    def payout(self, payout):
+        self._payout = payout
+    
     def unhole(self):
         if self._hole is not None:
             self._cards.append(self._hole)
@@ -210,8 +219,26 @@ class RuleSet:
     def get_dealer_play(self, hand):
         assert False  # implement in subclass
         
-    def verify_player_choice(self, hand_player, hand_dealer, choice):
-        return choice in self.get_player_options(hand_player, hand_dealer)
+    # def verify_player_choice(self, hand_player, hand_dealer, choice):
+    #     return choice in self.get_player_options(hand_player, hand_dealer)
+    
+    def calculate_payout(self, player_hand, dealer_hand):
+        # It would be better if the payout multipliers were configurable at
+        # runtime, perhaps as an input file.
+        multiplier = 0
+        if player_hand.best_score == 0:  # player busted
+            multiplier = -1
+        else:
+            if player_hand.best_score == dealer_hand.best_score:
+                multiplier = 0
+            elif player_hand.best_score > dealer_hand.best_score:
+                if player_hand.is_blackjack:
+                    multiplier = 1.5
+                else:
+                    multiplier = 1
+            elif player_hand.best_score < dealer_hand.best_score:
+                return -1
+        return multiplier * player_hand.bet
 
 
 class Strategy:
@@ -230,6 +257,8 @@ class Strategy:
         #   there is only one card history or delegate this feature to
         #   Strategy extensions.
         self._cards = []
+        # hands should probably be a copy to prevent modification outside
+        #   of game control.
         self._hands = hands
         self._get_num_dealt = ncards_dealt_func
 
@@ -273,10 +302,16 @@ class Player:
         self._strategy = strategy
         self._seat = seat
         self._deal = deal_one_func
+        self._net_game_winnings = 0
+        self._outlays = 0
     
     @property
     def seat(self):
         return self._seat
+    
+    @property
+    def balance(self):
+        return self._net_game_winnings
     
     def add_hand(self, hand):
         self._hands.append(hand)
@@ -301,8 +336,23 @@ class Player:
                 hand.add_card(self._deal())
                 play = self._strategy.advise_play(hand)
     
+    def net_round_winnings(self):
+        total = 0
+        for h in self._hands:
+            if h.payout is None:
+                raise InvalidStateError('All hands must be resolved before '
+                                        + 'calculating payouts!')
+            total += h.payout
+            # TODO: subtract insurance
+        return total
+    
+    def profit_per_dollar(self):
+        return self.balance / (self._outlays)
+    
     def observe(self):
-        strategy.observe()
+        self._outlays += sum([h.bet for h in self._hands])
+        self._net_game_winnings += self.net_round_winnings()
+        self._strategy.observe()
     
     def clear_hands(self):
         self._hands.clear()
@@ -312,30 +362,36 @@ class Player:
         return 'Player %d:\n\t%s' % (self.seat, hands_str)
 
 
+class InvalidStateError(Exception):
+    pass
+
+
 class Game:
     def __init__(self, ruleset, num_decks=6, depth_threshold=0.75):
         self._rules = ruleset
         self._shoe = Shoe(num_decks, depth_threshold)
         self._players = []
         self._round_num = 0
-        self._game = (ruleset.__name__, num_decks, depth_threshold)
+        self._game = (ruleset.__class__.__name__, num_decks, depth_threshold)
+        self._hands = []  # never re-assign
         self._dealer = None
-        self._hands = None
         self._results = None
         
     def add_player(self, seat, strategy_class):
-        strategy = strategy_class(seat, self._shoe.num_dealt)
-        self._players.add(Player(seat, strategy, self._shoe.deal_one))
+        strategy = strategy_class(self._hands, self._shoe.num_dealt)
+        self._players.append(Player(seat, strategy, self._shoe.deal_one))
         # There's probably a better way to account for this, but let's make
         #   sure the player list is ordered by seat after each new player.
         self._players.sort(key=lambda p: p.seat)
     
     def _setup_round(self):
+        self._shoe.check_reshuffle()
         self._results = None
-        self._hands = []
+        self._hands[:] = []  # just clear, don't re-assign
         self._dealer = Dealer(self._rules, self._shoe.deal_one)
         self._hands.append(self._dealer)
         for p in self._players:
+            p.clear_hands()
             bet = p.make_bet()
             hand = Hand((p.seat, 0), bet)
             self._hands.append(hand)
@@ -344,18 +400,35 @@ class Game:
     def _deal(self):
         for i in range(2):
             for h in self._hands[1:]:
-                h.add_card(this._shoe.deal_one())
+                h.add_card(self._shoe.deal_one())
             is_holecard = i==0
-            self._dealer.add_card(this._shoe.deal_one(), is_holecard)
+            self._dealer.add_card(self._shoe.deal_one(), is_holecard)
     
     def _play_hands(self):
-        for p in self._players:
-            p.play_through()
-        self._dealer.play_through()
+        if not self._dealer.is_blackjack:
+        # If the play_through functionality were implemented here, then the
+        #   originally intended separation between player choices and rule
+        #   enforcement would be better maintained.  For example, the Game
+        #   would ask a player for the next move and would independently
+        #   verify (RuleSet.verify_player_option) that the move was valid
+        #   under the current rules before fulfilling the move request.
+            for p in self._players:
+                p.play_through()
+            # Dealer only plays through if there is at least one unbusted
+            #   hand still in play.
+            inplay = False
+            for h in self._hands[1:]:
+                if h.best_score > 0:
+                    inplay = True
+                    break
+            if inplay:
+                self._dealer.play_through()
     
     def _resolve_hands(self):
         # set results of round as tuple of payouts
-        pass
+        for hand in self._hands[1:]:
+            hand.payout = self._rules.calculate_payout(hand, self._dealer)
+        self._results = (p.net_round_winnings() for p in self._players)
     
     def _observe(self):
         for p in self._players:
@@ -369,11 +442,23 @@ class Game:
         self._resolve_hands()
         self._observe()
         
-    def play(self, num_rounds):
+    def play(self, num_rounds, rounds_out=None):
         for iround in range(num_rounds):
             self._play_round()
+            game_str = ','.join([str(el) for el in self._game])
+            results_str = ','.join([str(el) for el in self._results])
+            balances_str = ','.join([str(p.balance) for p in self._players])
+            profits_str = ','.join(['%.4f'%(p.profit_per_dollar()) for p
+                                    in self._players])
+            frac_dealt = self._shoe.num_dealt() / self._shoe.max_cards
+            if rounds_out is not None:
+                print('%d,%s,%.2f,%s,%s,%s' % (iround+1, game_str, frac_dealt,
+                                            results_str, balances_str,
+                                            profits_str),
+                          file=rounds_out)
+        return list(p.profit_per_dollar() for p in self._players)
+
     
-        
 ###############################################################################
 # py.test tests
     
