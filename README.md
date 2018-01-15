@@ -1,16 +1,18 @@
 # Blackjack Strategy Simulator
 
-[Note that not all rules have been implemented yet (e.g., insurance).]
+[Note 1: Not all rules have been implemented yet (e.g., insurance).]
+[Note 2: The Notebook `Blackjack_Preliminary_Analysis` provides some informal early notes and links to references about rules and statistics.]
 
+## Overview
 The Blackjack Strategy Simulator is meant to provide a simple framework for testing different blackjack player strategies under various rulesets.  The simulator is divided into three main conceptual components: (1) the *core* gameplay mechanism in `blackjack.py`, (2) the Strategy and RuleSet specifications, and (3) monitoring/analysis code that operates on serialized output (initially files) from the core gameplay mechanism.  The gameplay mechanism allows the invoker to specify how many rounds to play and returns the net results of the game for all players.  It can, also, print round-by-round results to a file, if provided by the invoker of `Game.play`, which, for example, could be useful for testing the effect of number of cards played on card-counting strategies.
 
-# How to simulate a strategy
+## How to simulate a strategy
 An example Strategy/RuleSet implementation is defined in `blackjack_sim1.py`.  The example demonstrates the basic recipe for creating a simulation:
 1. Import the core mechanism, `from blackjack import *`.
 1. Extend the `RuleSet` and `Strategy` classes to your specifications.  `Strategy` requires implementations for `advise_bet` and `advise_play`; `RuleSet requires implementations for `get_player_options`, `get_dealer_play`, and optionally `calculate_payout`.
 1. create/configure/run the `Game` in `__main__`.
 
-# How to analyze a strategy
+## How to analyze a strategy
 It's easiest to analyze the simulation results with a manual *batch* mentality.  For example, you would save your simulation results to files, and then use a Notebook to inspect and analyze the results.  In your simulation file (e.g., `blackjack_sim1.py`), you might have something like this:
 ```
 # RuleSet specification
