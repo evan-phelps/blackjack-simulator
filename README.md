@@ -10,7 +10,7 @@ The Blackjack Strategy Simulator is meant to provide a simple framework for test
 ## How to simulate a strategy
 An example Strategy/RuleSet implementation is defined in `blackjack_sim1.py`.  The example demonstrates the basic recipe for creating a simulation:
 1. Import the core mechanism, `from blackjack import *`.
-1. Extend the `RuleSet` and `Strategy` classes to your specifications.  `Strategy` requires implementations for `advise_bet` and `advise_play`; `RuleSet requires implementations for `get_player_options`, `get_dealer_play`, and optionally `calculate_payout`.
+1. Extend the `RuleSet` and `Strategy` classes to your specifications.  `Strategy` requires implementations for `advise_bet` and `advise_play`; `RuleSet` requires implementations for `get_player_options`, `get_dealer_play`, and optionally `calculate_payout`.
 1. create/configure/run the `Game` in `__main__`.
 
 ## How to analyze a strategy
