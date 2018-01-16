@@ -337,6 +337,9 @@ class Player:
             #   don't consider this to be an unacceptable limitation.
             play = self._strategy.advise_play(hand)
             while play == RuleSet.ValidMoves.HIT:
+                if hand.best_score > 21:
+                    raise InvalidMoveError('Player chose to hit when already '
+                                            + 'busted.  Check Strategy!')
                 hand.add_card(self._deal())
                 play = self._strategy.advise_play(hand)
     
