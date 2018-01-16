@@ -49,6 +49,65 @@ class StrategyDefault(Strategy):
                                 + 'error, then your Strategy class does not '
                                 + 'account for all possible hand states.')
 
+
+class StrategyBasicHS(Strategy):
+    '''Always hit hard 11 or less.
+    Stand on hard 12 against a dealer 4-6, otherwise hit.
+    Stand on hard 13-16 against a dealer 2-6, otherwise hit.
+    Always stand on hard 17 or more.
+    Always hit soft 17 or less.
+    Stand on soft 18 except hit against a dealer 9, 10, or A.
+    Always stand on soft 19 or more.
+    '''
+    def advise_bet(self):
+        return 1
+    
+    def advise_play(self, hand):
+        dealer_cards_visible = self._hands[0].num_cards
+        if dealer_cards_visible > 1:
+            n = dealer_cards_visible
+            raise InvalidStateError('Dealer hand has %d visible cards ' % n
+                                     + 'but should not have more than '
+                                     + 'one at this point.')
+        upcard = self._hands[0].best_score
+        if upcard not in range(2,12):
+            raise InvalidStateError('Dealer hand has a score of %d ' % upcard
+                                     + 'but should have a value between 2 '
+                                     + 'and 11.')
+        score = hand.best_score
+        soft = hand.is_soft
+        hard = not hand.is_soft
+        #print(upcard, score, soft)
+        
+        hit_conditions = (
+            hard and score <= 11,
+            hard and score == 12 and upcard in [2,3,7,8,9,10,11],
+            hard and score in range(13,17) and upcard in [7,8,9,10,11],
+            soft and score <= 17,
+            soft and score == 18 and upcard in [9, 10, 11]
+        )
+        
+        stay_conditions = (
+            hard and score == 12 and upcard in range(4,7),
+            hard and score in range(13,17) and upcard in range(2,7),
+            hard and score >= 17,
+            soft and score == 18 and upcard in range(2,9),
+            soft and score >= 19
+        )
+        
+        num_hit_conditions = sum(hit_conditions)
+        num_stay_conditions = sum(stay_conditions)
+        
+        if num_hit_conditions + num_stay_conditions == 1:
+            if num_hit_conditions == 1:
+                return RuleSet.ValidMoves.HIT
+            if num_stay_conditions == 1:
+                return RuleSet.ValidMoves.STAY
+
+        raise InvalidMoveError('One and only one condition must be '
+                                + 'satisfied!  Check strategy rules.')
+        
+
 ###############################################################################
 # py.test tests
 
@@ -95,12 +154,10 @@ def test_StrategyDefault():
 
 
 if __name__ == '__main__':
-    game = Game(RuleSetBase())
-    game.add_player(1, StrategyDefault)
-    game.add_player(2, StrategyDefault)
-    game.add_player(3, StrategyDefault)
-    game.add_player(4, StrategyDefault)
-    game.add_player(5, StrategyDefault)
-    game.add_player(6, StrategyDefault)
-    with open('1000_rounds.csv', 'w') as fout:
-        print(game.play(1000, fout))
+    for i in range(100):
+        game = Game(RuleSetBase())
+        game.add_player(1, StrategyBasicHS)
+        game.add_player(2, StrategyDefault)
+        print(','.join([str(s) for s in game.play(100)]), flush=True)
+    #with open('1000_rounds.csv', 'w') as fout:
+    #    print(game.play(1000, fout))

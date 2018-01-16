@@ -145,6 +145,10 @@ class Hand:
         return self.num_cards == 2 and self.best_score == 21
 
     @property
+    def is_soft(self):
+        return len([s for s in self.scores if s <= 21])>1
+    
+    @property
     def scores(self):
         '''Returns all possible scores (more than 1 if hand contains aces).'''
         card_vals = [card.values for card in self._cards]
@@ -201,6 +205,9 @@ class Hand:
                                                   ' '.join(cards))
 
 
+class InvalidMoveError(Exception):
+    pass
+
 class RuleSet:
     '''RuleSet is informally an abstract base class meant to be extended
     by a specific RuleSet that implements the rules of a particular variant
@@ -209,9 +216,6 @@ class RuleSet:
     class ValidMoves:
         STAY  = 'S'
         HIT   = 'H'
-
-        class InvalidMoveError(Exception):
-            pass
     
     def get_player_options(self, hand_player, hand_dealer):
         assert False  # implement in subclass
@@ -225,7 +229,7 @@ class RuleSet:
     def calculate_payout(self, player_hand, dealer_hand):
         # It would be better if the payout multipliers were configurable at
         # runtime, perhaps as an input file.
-        multiplier = 0
+        multiplier = None
         if player_hand.best_score == 0:  # player busted
             multiplier = -1
         else:
@@ -376,7 +380,11 @@ class Game:
         self._hands = []  # never re-assign
         self._dealer = None
         self._results = None
-        
+    
+    @property
+    def _fhands(self):
+        return self._hands
+    
     def add_player(self, seat, strategy_class):
         strategy = strategy_class(self._hands, self._shoe.num_dealt)
         self._players.append(Player(seat, strategy, self._shoe.deal_one))
