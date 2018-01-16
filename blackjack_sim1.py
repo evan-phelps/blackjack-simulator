@@ -106,51 +106,6 @@ class StrategyBasicHS(Strategy):
 
         raise InvalidMoveError('One and only one condition must be '
                                 + 'satisfied!  Check strategy rules.')
-        
-
-###############################################################################
-# py.test tests
-
-def test_Round():
-    # setup game
-    shoe = Shoe(6, 0.75)
-    hands = []
-    rules = RuleSetBase()
-    strategy_class = StrategyDefault
-    strategy = strategy_class(hands, shoe.num_dealt)
-    player1 = Player(2, strategy, shoe.deal_one)
-    player2 = Player(6, strategy, shoe.deal_one)
-    
-    # setup round
-    dealer = Dealer(rules, shoe.deal_one)
-    hands.append(dealer)
-    ## take bets, set hands
-    for p in [player1, player2]:
-        bet = p.make_bet()
-        hand = Hand((p.seat, 0), bet)
-        hands.append(hand)
-        p.add_hand(hand)
-    # deal
-    for i in range(2):
-        for h in hands[1:]:
-            h.add_card(shoe.deal_one())
-        dealer.add_card(shoe.deal_one(), i==0)
-    
-    player1.play_through()
-    player2.play_through()
-    dealer.play_through()
-    
-    # look
-    print(dealer)
-    print(player1)
-    print(player2)
-    
-def test_RuleSetBase():
-    assert True
-    
-
-def test_StrategyDefault():
-    assert True
 
 
 if __name__ == '__main__':
